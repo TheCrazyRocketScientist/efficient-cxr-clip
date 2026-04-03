@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---SETTINGS ---
-ENV_NAME="cxrclip"
+ENV_NAME="testenv"
 MARKER_FILE=".setup"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 export PROJECT_ROOT="$SCRIPT_DIR"
@@ -23,6 +23,7 @@ else
     conda create -y -n $ENV_NAME python=3.10.20
     conda activate $ENV_NAME
 
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
     pip install -r requirements.txt
 
     #get data from kaggle here
