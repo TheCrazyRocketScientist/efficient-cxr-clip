@@ -28,7 +28,7 @@ else
     #get data from kaggle here
     #setup dataset folder and env variable
     
-    chmod +x ./bash_scripts/*.sh
+    chmod +x ./scripts/*.sh
     chmod +x ./*.sh
 
     touch "$MARKER_FILE"
