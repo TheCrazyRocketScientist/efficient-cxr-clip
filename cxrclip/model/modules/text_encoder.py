@@ -11,6 +11,7 @@ class HuggingfaceTextEncoder(nn.Module):
         gradient_checkpointing: bool = False,
         cache_dir: str = "~/.cache/huggingface/hub",
         local_files_only: bool = False,
+        use_safetensors: bool = True,
         trust_remote_code: bool = False,
         revision = "main",
         fd = False,
@@ -26,6 +27,7 @@ class HuggingfaceTextEncoder(nn.Module):
                 trust_remote_code=trust_remote_code,
                 revision=revision,
                 force_download=fd,
+                use_safetensors=use_safetensors
             )
         else:
             # initializing with a config file does not load the weights associated with the model
