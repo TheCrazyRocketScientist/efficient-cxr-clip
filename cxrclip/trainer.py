@@ -9,7 +9,7 @@ from wandb.integration.tensorboard import patch
 
 import torch
 import torch.distributed as dist
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, open_dict
 from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
 
@@ -92,7 +92,7 @@ def run(local_rank, cfg: Dict):
 
     log.info(f"{device}: Build the LR scheulder")
     if "total_epochs" in cfg["scheduler"]["config"]:
-        with OmegaConf.open_dict(cfg):
+        with open_dict(cfg):
             cfg["scheduler"]["config"]["total_steps"] = len(train_dataloader) * cfg["scheduler"]["config"]["total_epochs"]
     if "warmup_epochs" in cfg["scheduler"]["config"]:
         # with open_dict(cfg):
