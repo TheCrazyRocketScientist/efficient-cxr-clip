@@ -95,11 +95,11 @@ def run(local_rank, cfg: Dict):
         with open_dict(cfg):
             cfg["scheduler"]["config"]["total_steps"] = len(train_dataloader) * cfg["scheduler"]["config"]["total_epochs"]
     if "warmup_epochs" in cfg["scheduler"]["config"]:
-        # with open_dict(cfg):
-        if isinstance(cfg["scheduler"]["config"]["warmup_epochs"], int):
-            cfg["scheduler"]["config"]["warmup_steps"] = len(train_dataloader) * cfg["scheduler"]["config"]["warmup_epochs"]
-        elif isinstance(cfg["scheduler"]["config"]["warmup_epochs"], float):
-            cfg["scheduler"]["config"]["warmup_steps"] = cfg["scheduler"]["config"]["warmup_epochs"]
+        with open_dict(cfg):
+            if isinstance(cfg["scheduler"]["config"]["warmup_epochs"], int):
+                cfg["scheduler"]["config"]["warmup_steps"] = len(train_dataloader) * cfg["scheduler"]["config"]["warmup_epochs"]
+            elif isinstance(cfg["scheduler"]["config"]["warmup_epochs"], float):
+                cfg["scheduler"]["config"]["warmup_steps"] = cfg["scheduler"]["config"]["warmup_epochs"]
 
     scheduler = build_scheduler(optimizer, cfg["scheduler"])
     scaler = torch.cuda.amp.GradScaler() if cfg["base"]["amp"] else None
