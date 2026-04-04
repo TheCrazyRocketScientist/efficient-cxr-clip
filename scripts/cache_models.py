@@ -1,4 +1,5 @@
 import timm
+from huggingface_hub import snapshot_download
 from transformers import AutoTokenizer, AutoModel
 from grab_correct_pr import get_first_safetensors_pr
 
@@ -25,6 +26,9 @@ TEXT_VARIANTS = [
 ]
 
 def populate_cache():
+
+    cache_dir = os.getenv("HF_HOME")
+
     for v_name in VISION_VARIANTS:
         try:
             timm.create_model(v_name, pretrained=True, num_classes=0)
@@ -34,8 +38,20 @@ def populate_cache():
     for t_name in TEXT_VARIANTS:
         rev = get_first_safetensors_pr(t_name) or "main"
         try:
+            """
             AutoTokenizer.from_pretrained(t_name, revision=rev)
             AutoModel.from_pretrained(t_name, revision=rev, use_safetensors=True)
+
+            """
+
+            snapshot_download(
+                repo_id=t_name,
+                revision=rev,
+                cache_dir=cache_dir,
+                library_name="transformers",
+                # Only download safe/necessary files to save space
+                allow_patterns=["*.json", "*.txt", "*.safetensors", "tokenizer.model"]
+            )
         except Exception as e:
             print(f"[FAIL] {t_name}: {e}")
 
