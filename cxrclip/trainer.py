@@ -92,8 +92,8 @@ def run(local_rank, cfg: Dict):
 
     log.info(f"{device}: Build the LR scheulder")
     if "total_epochs" in cfg["scheduler"]["config"]:
-        # with open_dict(cfg):
-        cfg["scheduler"]["config"]["total_steps"] = len(train_dataloader) * cfg["scheduler"]["config"]["total_epochs"]
+        with OmegaConf.open_dict(cfg):
+            cfg["scheduler"]["config"]["total_steps"] = len(train_dataloader) * cfg["scheduler"]["config"]["total_epochs"]
     if "warmup_epochs" in cfg["scheduler"]["config"]:
         # with open_dict(cfg):
         if isinstance(cfg["scheduler"]["config"]["warmup_epochs"], int):
