@@ -30,7 +30,8 @@ def main(cfg: DictConfig):
     # torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
 
-    cfg = convert_dictconfig_to_dict(cfg)
+    #cfg = convert_dictconfig_to_dict(cfg)
+    print("test")
     run(local_rank, cfg)
 
 

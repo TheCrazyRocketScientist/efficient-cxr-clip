@@ -48,7 +48,7 @@ def run(local_rank, cfg: Dict):
             group="H100-April"
         )
 
-        patch()   
+        #patch()   
      
     log.info(f"DistEnv: {util.GlobalEnv.get()}")
 

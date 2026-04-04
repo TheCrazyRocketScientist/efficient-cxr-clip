@@ -1,0 +1,3 @@
+- model.image_encoder.name=timm/fastvit_t8.apple_in1k
+- model.text_encoder.name=nlpie/tiny-biobert
+- tokenizer.pretrained_model_name_or_path=nlpie/tiny-biobert

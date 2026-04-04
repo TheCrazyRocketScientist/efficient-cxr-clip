@@ -1,11 +1,11 @@
 defaults:
   - _self_
   - data_train:
-    - mimic_cxr
     - chexpert
+    - mimic_cxr
   - data_valid:
-    - mimic_cxr
     - chexpert
+    - mimic_cxr
   - dataloader: dataloader_128
   - tokenizer: clinical_bert
   - transform: clahe
