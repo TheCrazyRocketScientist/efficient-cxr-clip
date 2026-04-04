@@ -11,10 +11,16 @@ from transformers import AutoTokenizer
 
 def load_tokenizer(source, pretrained_model_name_or_path, cache_dir, **kwargs):
     if source == "huggingface":
+
+        local_files_only = kwargs.pop(
+            "local_files_only", 
+            os.path.exists(os.path.join(cache_dir, f'models--{pretrained_model_name_or_path.replace("/", "--")}'))
+        )
+        
         tokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
             cache_dir=cache_dir,
-            local_files_only=os.path.exists(os.path.join(cache_dir, f'models--{pretrained_model_name_or_path.replace("/", "--")}')),
+            local_files_only=local_files_only,
             **kwargs,
         )
         if tokenizer.bos_token_id is None:

@@ -3,6 +3,7 @@ notes/
 .vscode/
 .setup
 wandb/
+outputs/
 # Research Assets (Models, Weights, Caches)
 .assets/
 hf_cache/
