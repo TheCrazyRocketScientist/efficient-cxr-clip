@@ -1,3 +1,4 @@
+import os
 import timm
 from huggingface_hub import snapshot_download
 from transformers import AutoTokenizer, AutoModel
