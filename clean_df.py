@@ -1,23 +1,42 @@
 import pandas as pd
+import ast
 import os
 
-# Define your path
-CSV_PATH = '/home/paranjay/Desktop/research/testing/efficient-cxr-clip/datasets/chexpert_train.csv'
+CSV_PATH = rf"datasets/chexpert_valid.csv"
+
+# Initialize our counter
+cleaned_count = 0
+
+def sanitize_and_count(val):
+    global cleaned_count
+    try:
+        parsed = ast.literal_eval(str(val))
+        # If it's a list and has exactly 3 elements, it's already "healthy"
+        if isinstance(parsed, list) and len(parsed) == 3:
+            return str(parsed)
+    except:
+        pass
+    
+    # If we reach here, the row was "mangled" (NaN, [], or wrong length)
+    cleaned_count += 1
+    return "[[], [], []]"
 
 if os.path.exists(CSV_PATH):
-    print(f"Reading {CSV_PATH}...")
+    print(f"🔍 Auditing {CSV_PATH}...")
     df = pd.read_csv(CSV_PATH)
+    total_rows = len(df)
     
-    # The "Triple-List" Fix: 
-    # This ensures 'positive, negative, uncertain = labels' doesn't crash.
-    df['text_label'] = df['text_label'].fillna("[[], [], []]")
+    # Run the sanitization
+    df['text_label'] = df['text_label'].apply(sanitize_and_count)
     
-    # Optional: ensure any empty strings in the 'text' column are also handled
-    if 'text' in df.columns:
-        df['text'] = df['text'].fillna("")
-    
-    # Save it back (index=False is important to avoid adding an 'Unnamed: 0' column)
+    # Save the cleaned version
     df.to_csv(CSV_PATH, index=False)
-    print("✅ CSV Sanitized with [[], [], []] structure. Ready to resume!")
+    
+    print("-" * 30)
+    print(f"✅ SANITIZATION COMPLETE")
+    print(f"📊 Total Rows Processed: {total_rows}")
+    print(f"🧹 Mangled Rows Fixed:  {cleaned_count}")
+    print(f"📈 Cleanliness Rate:    {((total_rows - cleaned_count) / total_rows) * 100:.2f}%")
+    print("-" * 30)
 else:
-    print(f"❌ Error: Could not find CSV at {CSV_PATH}. Check your paths!")
+    print("❌ Error: CSV not found. Check your paths!")
