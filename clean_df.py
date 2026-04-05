@@ -2,41 +2,61 @@ import pandas as pd
 import ast
 import os
 
-CSV_PATH = rf"datasets/chexpert_valid.csv"
+TARGET_FILE = 'datasets/chexpert_valid_old.csv'
+OUTPUT_FILE = 'datasets/chexpert_valid.csv'
 
-# Initialize our counter
-cleaned_count = 0
+def rework_dataset(path):
+    if not os.path.exists(path): 
+        print(f"❌ File not found: {path}")
+        return
+    
+    df = pd.read_csv(path)
 
-def sanitize_and_count(val):
-    global cleaned_count
-    try:
-        parsed = ast.literal_eval(str(val))
-        # If it's a list and has exactly 3 elements, it's already "healthy"
-        if isinstance(parsed, list) and len(parsed) == 3:
-            return str(parsed)
-    except:
-        pass
-    
-    # If we reach here, the row was "mangled" (NaN, [], or wrong length)
-    cleaned_count += 1
-    return "[[], [], []]"
+    def get_available_views(row):
+        views = []
+        # Check specific headers for ACTUAL path data
+        for col in ['AP', 'PA', 'Lateral']:
+            val = row.get(col)
+            # Ensure the cell isn't NaN, isn't an empty string, and isn't just "[]"
+            if pd.notna(val):
+                clean_val = str(val).strip()
+                if clean_val != "" and clean_val != "[]":
+                    views.append(col)
+        
+        # If nothing found in specific columns, check 'image' (MIMIC style fallback)
+        if not views:
+            img_val = row.get('image')
+            if pd.notna(img_val) and str(img_val).strip() not in ["", "[]"]:
+                views.append('image')
 
-if os.path.exists(CSV_PATH):
-    print(f"🔍 Auditing {CSV_PATH}...")
-    df = pd.read_csv(CSV_PATH)
-    total_rows = len(df)
+        return str(views)
+
+    print("Scrubbing 'Frontal' ambiguity and building view map...")
+    # This replaces the old 'view' (which likely just said 'Frontal') with the list of keys
+    df['view'] = df.apply(get_available_views, axis=1)
+
+    # Drop rows that have zero images
+    df_cleaned = df[df['view'] != "[]"].copy()
+
+    # --- Label Sanitization (The [[], [], []] fix) ---
+    def sanitize_labels(val):
+        try:
+            parsed = ast.literal_eval(str(val))
+            if isinstance(parsed, list) and len(parsed) == 3:
+                return str(parsed)
+        except: 
+            pass
+        return "[[], [], []]"
     
-    # Run the sanitization
-    df['text_label'] = df['text_label'].apply(sanitize_and_count)
-    
-    # Save the cleaned version
-    df.to_csv(CSV_PATH, index=False)
+    df_cleaned['text_label'] = df_cleaned['text_label'].apply(sanitize_labels)
+
+    df_cleaned.to_csv(OUTPUT_FILE, index=False)
     
     print("-" * 30)
-    print(f"✅ SANITIZATION COMPLETE")
-    print(f"📊 Total Rows Processed: {total_rows}")
-    print(f"🧹 Mangled Rows Fixed:  {cleaned_count}")
-    print(f"📈 Cleanliness Rate:    {((total_rows - cleaned_count) / total_rows) * 100:.2f}%")
+    print(f"✅ Rework Complete")
+    print(f"📊 Original Rows: {len(df)}")
+    print(f"📊 Final Rows:    {len(df_cleaned)}")
+    print(f"📝 Sample 'view' list: {df_cleaned['view'].iloc[0]}")
     print("-" * 30)
-else:
-    print("❌ Error: CSV not found. Check your paths!")
+
+rework_dataset(TARGET_FILE)
