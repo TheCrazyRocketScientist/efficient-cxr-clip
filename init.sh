@@ -36,6 +36,10 @@ else
     echo "First-time Setup Finished."
 fi
 
+#load env vars for kaggle,wandb and hf
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+
 # --- STARTUP ---
 conda activate $ENV_NAME
 source ./scripts/startup.sh
