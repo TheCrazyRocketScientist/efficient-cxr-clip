@@ -40,9 +40,11 @@ for vision in "${VISION_VARIANTS[@]}"; do
         echo "Fetching correct PR revision for: $text"
         
         # Dynamically get the best PR or main branch using your updated script
-        DYNAMIC_REV=$(python3 "$PROJECT_ROOT/scripts/grab_correct_pr.py" --model_id "$text")
+        DYNAMIC_REV=$(python3 "$PROJECT_ROOT/scripts/grab_correct_pr.py" --model_id "$text" 2>/dev/null | tail -n 1)
         
         echo "Starting training for Vision: $vision | Text: $text | Revision: $DYNAMIC_REV"
+
+        if [ -z "$DYNAMIC_REV" ]; then DYNAMIC_REV="main"; fi
         
         # We override the model encoders, the tokenizer, and the dynamic revision
         # Using ~ to exclude datasets as per your example call

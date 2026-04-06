@@ -1,5 +1,6 @@
 # scripts/grab_correct_pr.py
 
+import sys
 import argparse
 from huggingface_hub import HfApi, list_repo_refs
 
@@ -30,7 +31,7 @@ def get_first_safetensors_pr(model_id):
                 continue
                 
     except Exception as e:
-        print(f"  [ERROR] Could not access {model_id}: {e}")
+        print(f"Error: Could not access {e}", file=sys.stderr)
     
     return None
 
