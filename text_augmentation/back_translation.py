@@ -136,7 +136,7 @@ if __name__ == "__main__":
     backtranslation = BackTranslation(lang=args.lang)
     set_random_seed(args.seed)
     inp_data_path = rf"text_augmentation/mimic_train_study_wise_final.csv"
-    outp_data_path = f"datasets/mimic_train.csv"
+    outp_data_path = f"datasets/mimic_train_augmented.csv"
     if not os.path.exists(os.path.dirname(outp_data_path)):
         os.mkdir(os.path.dirname(outp_data_path))
     backtranslation.do_back_translation(
