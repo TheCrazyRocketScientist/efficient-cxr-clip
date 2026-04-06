@@ -39,6 +39,7 @@ fi
 #load env vars for kaggle,wandb and hf
 if [ -f "$PROJECT_ROOT/.env" ]; then
     export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+fi
 
 # --- STARTUP ---
 conda activate $ENV_NAME
