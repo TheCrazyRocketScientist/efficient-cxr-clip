@@ -23,7 +23,7 @@ else
     conda create -y -n $ENV_NAME python=3.10.20
     conda activate $ENV_NAME
 
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
     pip install -r requirements.txt
 
     #get data from kaggle here

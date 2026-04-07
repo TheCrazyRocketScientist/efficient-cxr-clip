@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---SETTINGS ---
-ENV_NAME="runpodenv"
+ENV_NAME="testenv"
 MARKER_FILE=".setup"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 export PROJECT_ROOT="$SCRIPT_DIR"
