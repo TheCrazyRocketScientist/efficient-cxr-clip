@@ -3,6 +3,7 @@ import ast
 import os
 import random
 import sys
+import gc
 import wandb
 
 import numpy as np
@@ -54,9 +55,12 @@ class TextDataset(Dataset):
         return self.text_data_list[index]
 
     def collate_fn(self, instances):
-        tokens = self.tokenizer(instances, return_tensors="pt", padding=True)
+        tokens = self.tokenizer(instances, return_tensors="pt", padding=True,max_length=512, truncation=True)
         return tokens
-
+    
+    def _clear_memory(self):
+        torch.cuda.empty_cache()
+        gc.collect()
 
 class BackTranslation:
     def __init__(self, lang="de"):
@@ -66,8 +70,13 @@ class BackTranslation:
         self.en_lang_tokenizer = AutoTokenizer.from_pretrained(f"Helsinki-NLP/opus-mt-en-{lang}")
         self.lang_en_tokenizer = AutoTokenizer.from_pretrained(f"Helsinki-NLP/opus-mt-{lang}-en")
 
-        self.en_lang_translator = MarianMTModel.from_pretrained(f"Helsinki-NLP/opus-mt-en-{lang}").to(self.device)
-        self.lang_en_translator = MarianMTModel.from_pretrained(f"Helsinki-NLP/opus-mt-{lang}-en").to(self.device)
+        self.en_lang_translator = MarianMTModel.from_pretrained(f"Helsinki-NLP/opus-mt-en-{lang}",torch_dtype=torch.bfloat16,use_safetensors=True).to("cpu")
+        self.lang_en_translator = MarianMTModel.from_pretrained(f"Helsinki-NLP/opus-mt-{lang}-en",torch_dtype=torch.bfloat16,use_safetensors=True).to("cpu")
+
+    def _clear_memory(self):
+        """Standard cleanup for high-memory environments"""
+        torch.cuda.empty_cache()
+        gc.collect()
 
     def do_back_translation(self, original_data_path, out_data_path, batch_size, temperature, **generate_kwargs):
         assert len(temperature) <= 2
@@ -76,24 +85,35 @@ class BackTranslation:
         pandas_text_dataset = TextDataset(self.en_lang_tokenizer, original_data_path=original_data_path)
         dataloader = DataLoader(
             pandas_text_dataset,
-            shuffle=False,
+            shuffle=False,  
             drop_last=False,
             num_workers=4,
             batch_size=batch_size,
             collate_fn=pandas_text_dataset.collate_fn,
         )
 
+        self.en_lang_translator.to(self.device)
+        self.en_lang_translator.eval()
+
         text_num_list = pandas_text_dataset.text_num_list
         lang_out_list = []
 
-        for batch in tqdm(dataloader):
-            lang_out = self.en_lang_translator.generate(**batch.to(self.device), temperature=temp1, **generate_kwargs)
-            for out in lang_out:
-                lang_out_list.append(self.en_lang_tokenizer.decode(out).replace("<pad>", "").replace("</s>", "").strip())
+        with torch.no_grad():
+            for batch in tqdm(dataloader):
+                lang_out = self.en_lang_translator.generate(**batch.to(self.device), temperature=temp1, **generate_kwargs)
+                for out in lang_out:
+                    lang_out_list.append(self.en_lang_tokenizer.decode(out).replace("<pad>", "").replace("</s>", "").strip())
+        
+        self.en_lang_translator.to("cpu")
+        self._clear_memory()
 
         with open(outp_data_path.replace("csv", f"{self.lang}.txt"), "w") as fout:
             fout.write("\n".join(lang_out_list))
             fout.write("\n")
+        
+
+        self.lang_en_translator.to(self.device)
+        self.lang_en_translator.eval()
 
         lang_text_dataset = TextDataset(self.lang_en_tokenizer, text_data_list=lang_out_list)
         dataloader = DataLoader(
@@ -101,13 +121,20 @@ class BackTranslation:
         )
 
         en_out_list = []
-        for batch in tqdm(dataloader):
-            en_out = self.lang_en_translator.generate(**batch.to(self.device), temperature=temp2, **generate_kwargs)
-            for out in en_out:
-                en_out_list.append(self.lang_en_tokenizer.decode(out).replace("<pad>", "").replace("</s>", "").strip())
+
+        with torch.no_grad():
+            for batch in tqdm(dataloader):
+                en_out = self.lang_en_translator.generate(**batch.to(self.device), temperature=temp2, **generate_kwargs)
+                for out in en_out:
+                    en_out_list.append(self.lang_en_tokenizer.decode(out).replace("<pad>", "").replace("</s>", "").strip())
+
+
+        self.lang_en_translator.to("cpu")
+        self._clear_memory()
 
         text_augment_list = []
         start = 0
+
         for text_num in text_num_list:
             text_augment_list.append(en_out_list[start : start + text_num])
             start += text_num
