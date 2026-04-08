@@ -77,8 +77,16 @@ def run(local_rank, cfg: Dict):
     valid_dataloaders = datamodule.valid_dataloader(distributed=distributed)
 
     log.info(f"{device}: Build the model")
+
+    torch.backends.cudnn.benchmark = True
+
     model = build_model(cfg["model"], cfg["loss"], datamodule.tokenizer)
     model = model.to(device)
+
+    if hasattr(torch, 'compile'):
+        log.info(f"{device}: Compiling with torch.compile (max-autotune)")
+        model = torch.compile(model, mode="max-autotune")
+    
     if distributed:
         model = DDP(model, device_ids=[device], find_unused_parameters=True)
     if util.GlobalEnv.get().master:
@@ -102,7 +110,7 @@ def run(local_rank, cfg: Dict):
                 cfg["scheduler"]["config"]["warmup_steps"] = cfg["scheduler"]["config"]["warmup_epochs"]
 
     scheduler = build_scheduler(optimizer, cfg["scheduler"])
-    scaler = torch.cuda.amp.GradScaler() if cfg["base"]["amp"] else None
+    scaler = torch.cuda.amp.GradScaler(enabled=False) if cfg["base"]["amp"] else None
 
     if local_rank < 1:
         import nltk
@@ -241,7 +249,7 @@ def train(model, device, loss_func, optimizer, scheduler, dataloader, epoch, tot
         optimizer.zero_grad(set_to_none=True)
 
         if scaler:
-            with torch.cuda.amp.autocast():
+            with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                 outputs = model(batch, device)
                 loss_dict = loss_func(**outputs, is_train=True)
             total_loss = loss_dict["total"]
@@ -302,7 +310,7 @@ def validate(model, device, loss_func, dataloader_dict, epoch, total_epochs, loc
 
             for idx, batch in progress_iter:
                 if amp:
-                    with torch.cuda.amp.autocast():
+                    with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                         outputs = model(batch, device)
                         loss_dict = loss_func(**outputs, is_train=False)
                 else:
