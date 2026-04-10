@@ -66,9 +66,6 @@ class DataModule:
                 dataset,
                 collate_fn=getattr(self.datasets["train"][0], "collate_fn", None),
                 sampler=self.train_sampler,
-                pin_memory=True,          # Accelerates CPU-to-GPU transfer
-                persistent_workers=True,   # Keeps workers alive between epochs
-                prefetch_factor=2,         # Keeps batches in the queue
                 **self.dataloader_config["train"],
             )
 

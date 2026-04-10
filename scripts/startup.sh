@@ -34,12 +34,21 @@ for pair in "${PAIRS[@]}"; do
 
     # Execute training for this specific pair
     python3 "$PROJECT_ROOT/train.py" \
-        dataloader.train.batch_size=64 \
-        dataloader.valid.batch_size=64 \
-        dataloader.test.batch_size=64 \
-        dataloader.train.num_workers=4 \
-        dataloader.valid.num_workers=4 \
-        dataloader.test.num_workers=4 \
+        dataloader.train.batch_size=256 \
+        dataloader.valid.batch_size=256 \
+        dataloader.test.batch_size=256 \
+        dataloader.train.num_workers=16 \
+        dataloader.valid.num_workers=16 \
+        dataloader.test.num_workers=16 \
+        dataloader.train.pin_memory=True \
+        ++dataloader.train.persistent_workers=True \
+        ++dataloader.train.prefetch_factor=4 \
+        ++dataloader.valid.pin_memory=True \
+        ++dataloader.valid.persistent_workers=True \
+        ++dataloader.valid.prefetch_factor=4 \
+        ++dataloader.test.pin_memory=True \
+        ++dataloader.test.persistent_workers=True \
+        ++dataloader.test.prefetch_factor=4 \        
         model.image_encoder.name="$vision" \
         model.image_encoder.source="huggingface" \
         +model.image_encoder.model_type="fastvit" \
