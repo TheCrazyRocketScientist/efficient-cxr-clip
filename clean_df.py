@@ -2,8 +2,8 @@ import pandas as pd
 import ast
 import os
 
-TARGET_FILE = 'datasets/chexpert_valid_old.csv'
-OUTPUT_FILE = 'datasets/chexpert_valid.csv'
+TARGET_FILE = 'datasets/mimic_test.csv'
+OUTPUT_FILE = 'datasets/mimic_test.csv'
 
 def rework_dataset(path):
     if not os.path.exists(path): 
@@ -48,7 +48,7 @@ def rework_dataset(path):
             pass
         return "[[], [], []]"
     
-    df_cleaned['text_label'] = df_cleaned['text_label'].apply(sanitize_labels)
+    #df_cleaned['text_label'] = df_cleaned['text_label'].apply(sanitize_labels)
 
     df_cleaned.to_csv(OUTPUT_FILE, index=False)
     
