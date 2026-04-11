@@ -62,6 +62,7 @@ class DataModule:
                 )
 
             self.train_sampler = DistributedSampler(dataset=dataset, shuffle=shuffle) if distributed else None
+            self.dataloader_config["train"]["drop_last"] = True
             self.train_loader = DataLoader(
                 dataset,
                 collate_fn=getattr(self.datasets["train"][0], "collate_fn", None),
@@ -86,6 +87,7 @@ class DataModule:
                 sampler = DistributedSampler(dataset=val_dataset, shuffle=False) if distributed else None
                 if sampler is not None:
                     sampler.set_epoch(0)
+                self.dataloader_config["valid"]["drop_last"] = True
                 dataloader = DataLoader(
                     val_dataset, collate_fn=getattr(val_dataset, "collate_fn", None), sampler=sampler, **self.dataloader_config["valid"]
                 )
@@ -96,6 +98,7 @@ class DataModule:
     def test_dataloader(self):
         assert self.dataloader_config is not None
         if self.test_loader is None:
+            self.dataloader_config["test"]["drop_last"] = True
             self.test_loader = {
                 test_dataset.name: DataLoader(
                     test_dataset, collate_fn=getattr(test_dataset, "collate_fn", None), **self.dataloader_config["test"]

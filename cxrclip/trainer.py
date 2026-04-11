@@ -83,9 +83,11 @@ def run(local_rank, cfg: Dict):
     model = build_model(cfg["model"], cfg["loss"], datamodule.tokenizer)
     model = model.to(device)
 
+    """
     if hasattr(torch, 'compile'):
-        log.info(f"{device}: Compiling with torch.compile (max-autotune)")
-        model = torch.compile(model, mode="max-autotune")
+        log.info(f"{device}: Compiling with torch.compile (reduce-overhead)")
+        model = torch.compile(model, mode="reduce-overhead")
+    """
     
     if distributed:
         model = DDP(model, device_ids=[device], find_unused_parameters=True)
@@ -233,9 +235,14 @@ def run(local_rank, cfg: Dict):
     if util.GlobalEnv.get().master:
         wandb.finish()
 
-
 def train(model, device, loss_func, optimizer, scheduler, dataloader, epoch, total_epochs, scaler, total_step, print_step=30):
     model.train()
+    
+    # --- ACCUMULATION CONFIG ---
+    # target 256 / physical 64 = 4
+    accumulation_steps = 4 
+    # ---------------------------
+
     if util.GlobalEnv.get().local_rank < 1:
         progress_iter = tqdm(enumerate(dataloader), desc=f"[{epoch:03d}/{total_epochs:03d} epoch train]", total=len(dataloader))
     else:
@@ -245,46 +252,62 @@ def train(model, device, loss_func, optimizer, scheduler, dataloader, epoch, tot
     for k in loss_func.loss_list:
         avg_loss_dict[k.name] = 0.0
 
-    for idx, batch in progress_iter:
-        optimizer.zero_grad(set_to_none=True)
+    # Ensure grad is zeroed before starting
+    optimizer.zero_grad(set_to_none=True)
 
+    for idx, batch in progress_iter:
+        
         if scaler:
             with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                 outputs = model(batch, device)
                 loss_dict = loss_func(**outputs, is_train=True)
-            total_loss = loss_dict["total"]
+            
+            # Normalize loss so gradients are averaged across the accumulated batches
+            total_loss = loss_dict["total"] / accumulation_steps
             scaler.scale(total_loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            
+            # Only update weights every 'accumulation_steps'
+            if (idx + 1) % accumulation_steps == 0:
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+                # Scheduler usually steps per weight update
+                scheduler.step()
         else:
             outputs = model(batch, device)
             loss_dict = loss_func(**outputs, is_train=True)
-            total_loss = loss_dict["total"]
+            
+            total_loss = loss_dict["total"] / accumulation_steps
             total_loss.backward()
-            optimizer.step()
+            
+            if (idx + 1) % accumulation_steps == 0:
+                optimizer.step()
+                optimizer.zero_grad(set_to_none=True)
+                scheduler.step()
 
-        scheduler.step()
+        # Update global step for logging
         util.GlobalEnv.get().summary_writer.global_step = scheduler._step_count
 
         for k in loss_dict:
             avg_loss_dict[k] += loss_dict[k].item()
 
+        # Update Progress Bar (Show the full loss value for monitoring, not the divided one)
         if idx % print_step == 0 and util.GlobalEnv.get().local_rank < 1:
+            actual_loss = loss_dict["total"] # The un-divided loss
+            
             for k, lr in enumerate(scheduler.get_last_lr()):
                 util.GlobalEnv.get().summary_writer.train.add_scalar(f"hyperparam/lr-{k}", lr, scheduler._step_count)
-            util.GlobalEnv.get().summary_writer.train.add_scalar("loss", total_loss, scheduler._step_count)
-
-            for k in loss_dict:
-                util.GlobalEnv.get().summary_writer.train.add_scalar(f"loss/{k}", loss_dict[k], scheduler._step_count)
+            util.GlobalEnv.get().summary_writer.train.add_scalar("loss", actual_loss, scheduler._step_count)
 
             progress_iter.set_postfix(
                 {
                     "lr": [f"{v:.8f}" for v in scheduler.get_last_lr()],
-                    "loss": f"{total_loss:.6f}",
+                    "loss": f"{loss_dict['total']:.6f}",
                     "CUDA-Mem": f"{torch.cuda.memory_usage(device)}%",
                     "CUDA-Util": f"{torch.cuda.utilization(device)}%",
                 }
             )
+
         if total_step == scheduler._step_count:
             break
 

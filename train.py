@@ -9,6 +9,9 @@ from cxrclip import convert_dictconfig_to_dict, run, seed_everything
 
 log = logging.getLogger(__name__)
 
+torch.set_float32_matmul_precision('high')
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
 
 @hydra.main(version_base=None, config_path="configs", config_name="train")
 def main(cfg: DictConfig):

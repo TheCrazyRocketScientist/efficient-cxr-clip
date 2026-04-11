@@ -11,6 +11,8 @@ from transformers import AutoTokenizer
 
 def load_tokenizer(source, pretrained_model_name_or_path, cache_dir, **kwargs):
     if source == "huggingface":
+        kwargs.setdefault("use_fast", True)
+
 
         local_files_only = kwargs.pop(
             "local_files_only", 
