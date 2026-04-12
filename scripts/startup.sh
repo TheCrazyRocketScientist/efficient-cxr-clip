@@ -22,9 +22,9 @@ for pair in "${PAIRS[@]}"; do
     # CRITICAL FIX: Wrap the model/text names in "'$var'" 
     # This tells Hydra: "This is a literal string, don't parse the slashes"
     python3 "$PROJECT_ROOT/train.py" \
-        dataloader.train.batch_size=128 \
-        dataloader.valid.batch_size=128 \
-        dataloader.test.batch_size=128 \
+        dataloader.train.batch_size=64 \
+        dataloader.valid.batch_size=64 \
+        dataloader.test.batch_size=64 \
         dataloader.train.num_workers=16 \
         dataloader.valid.num_workers=16 \
         dataloader.test.num_workers=16 \
