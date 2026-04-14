@@ -14,7 +14,6 @@ def rework_dataset(path):
 
     def get_available_views(row):
         views = []
-        # Check specific headers for ACTUAL path data
         for col in ['AP', 'PA', 'Lateral']:
             val = row.get(col)
             # Ensure the cell isn't NaN, isn't an empty string, and isn't just "[]"
